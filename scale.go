@@ -20,6 +20,7 @@ func NewHandler(min, max int) func(http.ResponseWriter, *http.Request) {
 		err := Scale(context.Background(), min, max)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 		w.WriteHeader(http.StatusOK)
 	}
