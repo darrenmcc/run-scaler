@@ -15,24 +15,15 @@ import (
 	"google.golang.org/api/run/v1"
 )
 
-func NewHandler(min, max int) func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, _ *http.Request) {
-		err := Scale(context.Background(), min, max)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-	}
-}
-
-// NewEndpoint can be used as a go-kit endpoint in any Gizmo service.
-func NewEndpoint(min, max int) endpoint.Endpoint {
-	return func(ctx context.Context, _ interface{}) (interface{}, error) {
-		return nil, Scale(ctx, min, max)
-	}
-}
-
+// Scale allows a Cloud Run service to modify itself with the given scaling parameters on the fly.
+// Min and max correspond to min and max instances. Calling this creates a new revision.
+// Designed to work on a cron-like schedule to preempt large traffic changes that can't
+// be gracefully handled by Cloud Run's normal autoscaling capabilities.
+//
+// Example use cases:
+// - scale service to handle large data pushes from an outside provider that occur on a regular schedule
+// - allow for more idle instances during unpredictable daytime traffic and then scale back down at night
+// - handle users stampeding to your app, like during a breaking news alert or new game being published.
 func Scale(ctx context.Context, min, max int) error {
 	httpClient, err := google.DefaultClient(ctx, run.CloudPlatformScope)
 	if err != nil {
@@ -98,4 +89,30 @@ func Scale(ctx context.Context, min, max int) error {
 		return fmt.Errorf("Cloud Run API response code: %d", updateResp.StatusCode)
 	}
 	return nil
+}
+
+// NewHandler can be used in any http service e.g.
+// router.HandleFunc("/scale/up", scale.NewHandler(100, 1000))
+// router.HandleFunc("/scale/down", scale.NewHandler(0, 1000))
+func NewHandler(min, max int) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, _ *http.Request) {
+		err := Scale(context.Background(), min, max)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
+// NewEndpoint can be used as a go-kit endpoint in any Gizmo service e.g.
+// "/scale/up": {
+//     "POST": {
+//         Endpoint: scale.NewEndpoint(100, 1000),
+//     },
+// },
+func NewEndpoint(min, max int) endpoint.Endpoint {
+	return func(ctx context.Context, _ interface{}) (interface{}, error) {
+		return nil, Scale(ctx, min, max)
+	}
 }
