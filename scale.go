@@ -47,7 +47,11 @@ func Scale(ctx context.Context, min, max int) error {
 		"https://us-central1-run.googleapis.com/apis/serving.knative.dev/v1/namespaces/%s/services/%s",
 		project, os.Getenv("K_SERVICE"))
 
-	svcResp, err := http.NewRequestWithContext(ctx, http.MethodGet, runAdminURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, runAdminURL, nil)
+	if err != nil {
+		return err
+	}
+	svcResp, err := httpClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -79,7 +83,7 @@ func Scale(ctx context.Context, min, max int) error {
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPut, runAdminURL, bytes.NewBuffer(b))
+	req, err = http.NewRequestWithContext(ctx, http.MethodPut, runAdminURL, bytes.NewBuffer(b))
 	if err != nil {
 		return err
 	}
@@ -88,6 +92,7 @@ func Scale(ctx context.Context, min, max int) error {
 		return err
 	}
 	defer updateResp.Body.Close()
+
 	if updateResp.StatusCode != http.StatusOK {
 		return fmt.Errorf("Cloud Run API response code: %d", updateResp.StatusCode)
 	}
