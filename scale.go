@@ -23,7 +23,6 @@ import (
 // Example use cases:
 // - scale service to handle large data pushes from an outside provider that occur on a regular schedule
 // - allow for more idle instances during unpredictable daytime traffic and then scale back down at night
-// - handle users stampeding to your app, like during a breaking news alert or new game being published.
 func Scale(ctx context.Context, min, max int) error {
 	httpClient, err := google.DefaultClient(ctx, run.CloudPlatformScope)
 	if err != nil {
@@ -86,7 +85,7 @@ func Scale(ctx context.Context, min, max int) error {
 	defer updateResp.Body.Close()
 
 	if updateResp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Cloud Run API response code: %d", updateResp.StatusCode)
+		return fmt.Errorf("cloud Run API response code: %d", updateResp.StatusCode)
 	}
 	return nil
 }
